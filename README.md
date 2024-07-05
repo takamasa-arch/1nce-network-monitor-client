@@ -10,12 +10,12 @@ This repository contains a Python-based MQTT network monitoring system that peri
 
 .
 ├── main.py
-├── src
-│ ├── status_monitor.py
-│ └── mqtt_client.py
-└── data
-├── log
-└── mqtt_data
+├── src/
+│   ├── status_monitor.py
+│   └── mqtt_client.py
+└── data/
+    ├── log
+    └── mqtt_data
 
 ## Getting Started
 
