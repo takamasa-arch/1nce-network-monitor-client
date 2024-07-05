@@ -4,7 +4,7 @@ import time
 from datetime import datetime, timezone
 
 # グローバル変数
-BROKER_ADDRESS = "57.181.202.135"
+BROKER_ADDRESS = "57.181.202.135" # MQTT BrokerのIPに置き換えてください
 PORT = 1883
 ICCID = "8988228066605205172"  # 実際のICCIDに置き換えてください
 TOPIC = f"devices/{ICCID}/data"
