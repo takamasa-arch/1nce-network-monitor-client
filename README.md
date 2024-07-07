@@ -108,8 +108,10 @@ Logging
 
 ```sh
 sudo mkdir -p /var/log/mqtt_to_cloudwatch
-sudo chown ubuntu:ubuntu /var/log/mqtt_to_cloudwatch
+sudo chown pi:pi /var/log/mqtt_to_cloudwatch
 ```
+
+user and owner name should be changed with your environment
 
 ## Additional Information
 - Ensure your AWS credentials are configured correctly for the boto3 library to send logs to CloudWatch.
