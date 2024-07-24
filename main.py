@@ -2,6 +2,11 @@ from src.status_monitor import check_status
 from src.mqtt_client import send_mqtt_data
 import time
 from datetime import datetime, timezone
+import os
+import logging
+
+# ログ設定
+logging.basicConfig(level=logging.INFO, format='%(asctime)s - %(levelname)s - %(message)s', filename='/var/log/mqtt_to_cloudwatch/main.log')
 
 # グローバル変数
 BROKER_ADDRESS = "57.181.202.135" # MQTT BrokerのIPに置き換えてください
@@ -13,27 +18,37 @@ LOG_DIR = 'data/log'
 MQTT_DIR = 'data/mqtt_data'
 
 def main():
-    # データ保存用ディレクトリの作成
-    import os
-    os.makedirs(LOG_DIR, exist_ok=True)
-    os.makedirs(MQTT_DIR, exist_ok=True)
+    try:
+        # データ保存用ディレクトリの作成
+        os.makedirs(LOG_DIR, exist_ok=True)
+        os.makedirs(MQTT_DIR, exist_ok=True)
 
-    ping_interval = 60  # 1分おき
-    send_interval = 300  # 5分おき
-    last_send_time = datetime.now(timezone.utc)
+        ping_interval = 60  # 1分おき
+        send_interval = 300  # 5分おき
+        last_send_time = datetime.now(timezone.utc)
 
-    while True:
-        current_time = datetime.now(timezone.utc)
+        while True:
+            current_time = datetime.now(timezone.utc)
 
-        # 1分ごとにステータスチェック
-        check_status()
+            # 1分ごとにステータスチェック
+            try:
+                check_status()
+            except Exception as e:
+                logging.error(f"Error in check_status: {e}")
 
-        # 5分ごとにMQTTでデータ送信
-        if (current_time - last_send_time).total_seconds() >= send_interval:
-            if send_mqtt_data():
-                last_send_time = current_time
+            # 5分ごとにMQTTでデータ送信
+            if (current_time - last_send_time).total_seconds() >= send_interval:
+                try:
+                    if send_mqtt_data():
+                        last_send_time = current_time
+                except Exception as e:
+                    logging.error(f"Error in send_mqtt_data: {e}")
 
-        time.sleep(ping_interval)
+            time.sleep(ping_interval)
+
+    except Exception as e:
+        logging.critical(f"Critical error in main loop: {e}")
+        raise
 
 if __name__ == "__main__":
     main()

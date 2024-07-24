@@ -2,6 +2,8 @@ import json
 from datetime import datetime, timezone, timedelta
 from ping3 import ping
 import os
+from zoneinfo import ZoneInfo  # タイムゾーンを扱うモジュール
+
 
 def save_data(data, data_dir):
     timestamp = data['ts']
@@ -20,7 +22,9 @@ def delete_old_data(data_dir, days=7):
 def check_status():
     from main import GOOGLE_SERVER, BROKER_ADDRESS, LOG_DIR, MQTT_DIR
 
-    timestamp = datetime.now(timezone.utc).isoformat()
+    # タイムゾーンを東京に設定
+    tokyo_tz = ZoneInfo("Asia/Tokyo")
+    timestamp = datetime.now(timezone.utc).astimezone(tokyo_tz).isoformat()
 
     # Googleサーバーへのpingの結果を取得
     ping_result = ping(GOOGLE_SERVER)

@@ -49,7 +49,7 @@ def send_mqtt_data():
     for data in data_list:
         message = json.dumps(data)
         try:
-            result = client.publish(TOPIC, message, qos=2)
+            result = client.publish(TOPIC, message, qos=1)
             result.wait_for_publish()
             if result.rc != mqtt.MQTT_ERR_SUCCESS:
                 logging.error(f"Failed to publish message: {message}")
