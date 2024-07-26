@@ -3,7 +3,11 @@ from datetime import datetime, timezone, timedelta
 from ping3 import ping
 import os
 from zoneinfo import ZoneInfo  # タイムゾーンを扱うモジュール
+import subprocess
+import logging
 
+# ログ設定
+logging.basicConfig(level=logging.INFO, format='%(asctime)s - %(levelname)s - %(message)s', filename='/var/log/mqtt_to_cloudwatch/main.log')
 
 def save_data(data, data_dir):
     timestamp = data['ts']
@@ -19,12 +23,31 @@ def delete_old_data(data_dir, days=7):
         if timestamp < cutoff:
             os.remove(file)
 
+def connect_gsm():
+    try:
+        subprocess.run(['sudo', 'nmcli', 'con', 'up', 'id', 'myGSMConnection'], check=True)
+        logging.info("Connected to GSM network")
+        return True
+    except subprocess.CalledProcessError as e:
+        logging.error(f"Failed to connect: {e}")
+        return False
+
+def disconnect_gsm():
+    try:
+        subprocess.run(['sudo', 'nmcli', 'con', 'down', 'id', 'myGSMConnection'], check=True)
+        logging.info("Disconnected from GSM network")
+    except subprocess.CalledProcessError as e:
+        logging.error(f"Failed to disconnect: {e}")
+
 def check_status():
     from main import GOOGLE_SERVER, BROKER_ADDRESS, LOG_DIR, MQTT_DIR
 
     # タイムゾーンを東京に設定
     tokyo_tz = ZoneInfo("Asia/Tokyo")
     timestamp = datetime.now(timezone.utc).astimezone(tokyo_tz).isoformat()
+
+    # GSM接続の確立
+    lu_status = 1 if connect_gsm() else 0
 
     # Googleサーバーへのpingの結果を取得
     ping_result = ping(GOOGLE_SERVER)
@@ -36,7 +59,7 @@ def check_status():
 
     data = {
         "ts": timestamp,
-        "lu": 1,  # Location update: 1 for success, 0 for failure
+        "lu": lu_status,  # Location update: 1 for success, 0 for failure
         "pg": pg_status,  # Ping Google server: 1 for success, 0 for failure
         "po": po_status   # Ping OpenVPN server: 1 for success, 0 for failure
     }
@@ -50,3 +73,6 @@ def check_status():
     # 古いデータの削除
     delete_old_data(LOG_DIR)
     delete_old_data(MQTT_DIR)
+
+    # GSM接続の切断
+    disconnect_gsm()
