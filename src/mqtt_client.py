@@ -72,3 +72,48 @@ def send_mqtt_data():
     logging.info("MQTT session disconnected")
 
     return publish_successful
+
+def send_mqtt_radio_data():
+    from main import BROKER_ADDRESS, PORT, TOPIC_RADIO, MQTT_RADIO_DIR
+
+    client = mqtt.Client()
+    client.on_connect = on_connect
+    client.on_message = on_message
+    client.on_publish = on_publish
+
+    try:
+        client.connect(BROKER_ADDRESS, PORT, 60)
+        client.loop_start()
+    except Exception as e:
+        logging.error(f"Failed to connect to MQTT broker: {e}")
+        return False
+
+    # ローカルに保存されたすべてのラジオデータを読み込む
+    data_list, all_files = load_all_data(MQTT_RADIO_DIR)
+    publish_successful = True
+    for data in data_list:
+        message = json.dumps(data)
+        try:
+            result = client.publish(TOPIC_RADIO, message, qos=1)
+            result.wait_for_publish()
+            if result.rc != mqtt.MQTT_ERR_SUCCESS:
+                logging.error(f"Failed to publish radio message: {message}")
+                publish_successful = False
+        except Exception as e:
+            logging.error(f"Failed to publish radio message: {e}")
+            publish_successful = False
+
+    # 送信が成功したファイルを削除
+    if publish_successful:
+        for file in all_files:
+            os.remove(file)
+        logging.info("All radio messages have been published and files deleted.")
+    else:
+        logging.error("Some radio messages failed to publish. Files not deleted.")
+
+    # MQTTセッションを切断
+    client.loop_stop()
+    client.disconnect()
+    logging.info("MQTT session disconnected")
+
+    return publish_successful

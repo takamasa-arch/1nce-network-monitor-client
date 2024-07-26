@@ -9,9 +9,9 @@ import logging
 # ログ設定
 logging.basicConfig(level=logging.INFO, format='%(asctime)s - %(levelname)s - %(message)s', filename='/var/log/mqtt_to_cloudwatch/main.log')
 
-def save_data(data, data_dir):
+def save_data(data, data_dir, prefix):
     timestamp = data['ts']
-    filename = os.path.join(data_dir, f"{timestamp}.json")
+    filename = os.path.join(data_dir, f"{prefix}_{timestamp}.json")
     with open(filename, 'w') as f:
         json.dump(data, f)
 
@@ -39,8 +39,24 @@ def disconnect_gsm():
     except subprocess.CalledProcessError as e:
         logging.error(f"Failed to disconnect: {e}")
 
+def get_location_info():
+    try:
+        result = subprocess.run(['sudo', 'mmcli', '-m', '0', '--location-get'], capture_output=True, text=True, check=True)
+        return result.stdout
+    except subprocess.CalledProcessError as e:
+        logging.error(f"Failed to get location info: {e}")
+        return None
+
+def get_at_response():
+    try:
+        result = subprocess.run(['echo -ne "AT+CPSI?\r\n" | picocom -qrx 1000 /dev/tty4GPI'], capture_output=True, text=True, shell=True, check=True)
+        return result.stdout
+    except subprocess.CalledProcessError as e:
+        logging.error(f"Failed to get AT response: {e}")
+        return None
+
 def check_status():
-    from main import GOOGLE_SERVER, BROKER_ADDRESS, LOG_DIR, MQTT_DIR
+    from main import GOOGLE_SERVER, BROKER_ADDRESS, LOG_DIR, MQTT_DIR, RADIO_LOG_DIR, MQTT_RADIO_DIR
 
     # タイムゾーンを東京に設定
     tokyo_tz = ZoneInfo("Asia/Tokyo")
@@ -69,16 +85,46 @@ def check_status():
         "po": po_status   # Ping OpenVPN server: 1 for success, 0 for failure
     }
 
-    # ログとして保存
-    save_data(data, LOG_DIR)
+    # ステータスデータとして保存
+    save_data(data, LOG_DIR, 'status')
 
     # MQTT用のデータとして保存
-    save_data(data, MQTT_DIR)
+    save_data(data, MQTT_DIR, 'status')
+
+    # GSM接続の切断前にラジオステータスを取得
+    if lu_status == 1:
+        radio_status(RADIO_LOG_DIR, MQTT_RADIO_DIR)
+
+        # GSM接続の切断
+        disconnect_gsm()
 
     # 古いデータの削除
     delete_old_data(LOG_DIR)
     delete_old_data(MQTT_DIR)
 
-    # GSM接続の切断
-    if lu_status == 1:
-        disconnect_gsm()
+def radio_status(radio_log_dir, mqtt_radio_dir):
+    # タイムゾーンを東京に設定
+    tokyo_tz = ZoneInfo("Asia/Tokyo")
+    timestamp = datetime.now(timezone.utc).astimezone(tokyo_tz).isoformat()
+
+    # 位置情報を取得
+    location_info = get_location_info()
+
+    # ATコマンドの応答を取得
+    at_response = get_at_response()
+
+    data = {
+        "ts": timestamp,
+        "location_info": location_info,
+        "at_response": at_response
+    }
+
+    # ラジオステータスとして保存
+    save_data(data, radio_log_dir, 'radio_status')
+
+    # MQTT用のデータとして保存
+    save_data(data, mqtt_radio_dir, 'radio_status')
+
+    # 古いデータの削除
+    delete_old_data(radio_log_dir)
+    delete_old_data(mqtt_radio_dir)
