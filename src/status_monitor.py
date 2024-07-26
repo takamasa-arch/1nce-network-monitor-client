@@ -49,13 +49,18 @@ def check_status():
     # GSM接続の確立
     lu_status = 1 if connect_gsm() else 0
 
-    # Googleサーバーへのpingの結果を取得
-    ping_result = ping(GOOGLE_SERVER)
-    pg_status = 1 if ping_result else 0
+    # 接続が失敗した場合、残りのステータスはすべて0
+    if lu_status == 0:
+        pg_status = 0
+        po_status = 0
+    else:
+        # Googleサーバーへのpingの結果を取得
+        ping_result = ping(GOOGLE_SERVER)
+        pg_status = 1 if ping_result else 0
 
-    # OpenVPN Clientサーバーへのpingの結果を取得
-    ping_result = ping(BROKER_ADDRESS)
-    po_status = 1 if ping_result else 0
+        # OpenVPN Clientサーバーへのpingの結果を取得
+        ping_result = ping(BROKER_ADDRESS)
+        po_status = 1 if ping_result else 0
 
     data = {
         "ts": timestamp,
@@ -75,4 +80,5 @@ def check_status():
     delete_old_data(MQTT_DIR)
 
     # GSM接続の切断
-    disconnect_gsm()
+    if lu_status == 1:
+        disconnect_gsm()
