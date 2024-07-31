@@ -5,6 +5,13 @@ from datetime import datetime, timezone
 import os
 import logging
 
+# ログディレクトリのパス
+LOG_DIR_PATH = '/var/log/mqtt_to_cloudwatch/'
+
+# ログディレクトリが存在しない場合に作成
+if not os.path.exists(LOG_DIR_PATH):
+    os.makedirs(LOG_DIR_PATH, exist_ok=True)
+
 # ログ設定
 logging.basicConfig(level=logging.INFO, format='%(asctime)s - %(levelname)s - %(message)s', filename='/var/log/mqtt_to_cloudwatch/main.log')
 
