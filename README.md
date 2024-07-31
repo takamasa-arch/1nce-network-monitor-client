@@ -25,7 +25,24 @@ This repository contains a Python-based MQTT network monitoring system that peri
 - `paho-mqtt` library
 - `ping3` library
 
-You can install the required libraries using pip:
+Setting Up a Virtual Environment
+
+Install python3-venv if it's not already installed:
+```sh
+sudo apt install python3-venv
+```
+
+Create a virtual environment:
+```sh
+python3 -m venv venv
+```
+
+Activate the virtual environment:
+```sh
+source venv/bin/activate
+```
+
+Install the required libraries using pip:
 ```sh
 pip install paho-mqtt ping3
 ```

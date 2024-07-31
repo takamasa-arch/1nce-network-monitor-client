@@ -10,6 +10,10 @@ import logging
 logging.basicConfig(level=logging.INFO, format='%(asctime)s - %(levelname)s - %(message)s', filename='/var/log/mqtt_to_cloudwatch/main.log')
 
 def save_data(data, data_dir, prefix):
+    # ディレクトリが存在しない場合に作成
+    if not os.path.exists(data_dir):
+        os.makedirs(data_dir)
+
     timestamp = data['ts']
     filename = os.path.join(data_dir, f"{prefix}_{timestamp}.json")
     with open(filename, 'w') as f:
