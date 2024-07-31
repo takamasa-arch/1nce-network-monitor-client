@@ -23,10 +23,65 @@ def delete_old_data(data_dir, days=7):
         if timestamp < cutoff:
             os.remove(file)
 
+def send_at_command(command):
+    try:
+        result = subprocess.run(['echo', '-ne', command, '|', 'picocom', '-qrx', '1000', '/dev/tty4GPI'], capture_output=True, text=True, shell=True, check=True)
+        return result.stdout
+    except subprocess.CalledProcessError as e:
+        logging.error(f"Failed to send AT command: {e}")
+        return None
+
+def parse_cpsi_response(response):
+    try:
+        if response:
+            lines = response.splitlines()
+            for line in lines:
+                if line.startswith('+CPSI:'):
+                    parts = line.split(',')
+                    if len(parts) >= 13:
+                        return {
+                            "RSRQ": parts[10],
+                            "RSRP": parts[11],
+                            "RSSI": parts[12],
+                            "SNR": parts[13]
+                        }
+    except Exception as e:
+        logging.error(f"Failed to parse CPSI response: {e}")
+    return None
+
 def connect_gsm():
     try:
-        subprocess.run(['sudo', 'nmcli', 'con', 'up', 'id', 'myGSMConnection'], check=True)
-        logging.info("Connected to GSM network")
+        # Activate the GSM connection using AT+CFUN=1
+        response = send_at_command('AT+CFUN=1\r\n')
+        if response and "OK" in response:
+            logging.info("GSM connection activated")
+        else:
+            logging.error(f"Failed to activate GSM connection: {response}")
+            return False
+
+        # Check if the SIM is ready
+        response = send_at_command('AT+CPIN?\r\n')
+        if response and "+CPIN: READY" in response:
+            logging.info("SIM is ready")
+        else:
+            logging.error(f"SIM is not ready: {response}")
+            return False
+
+        # Check if PDP context is active
+        response = send_at_command('AT+CGATT?\r\n')
+        if response and "+CGATT: 1" in response:
+            logging.info("PDP context is active")
+        else:
+            logging.error(f"PDP context is not active: {response}")
+            # Try to activate PDP context
+            response = send_at_command('AT+CGATT=1\r\n')
+            if response and "OK" in response:
+                logging.info("PDP context activated")
+                return True
+            else:
+                logging.error(f"Failed to activate PDP context: {response}")
+                return False
+
         return True
     except subprocess.CalledProcessError as e:
         logging.error(f"Failed to connect: {e}")
@@ -34,26 +89,15 @@ def connect_gsm():
 
 def disconnect_gsm():
     try:
-        subprocess.run(['sudo', 'nmcli', 'con', 'down', 'id', 'myGSMConnection'], check=True)
-        logging.info("Disconnected from GSM network")
+        # Deactivate the GSM connection using AT+CFUN=0
+        response = send_at_command('AT+CFUN=0\r\n')
+        if response and "OK" in response:
+            logging.info("GSM connection deactivated")
+        else:
+            logging.error(f"Failed to deactivate GSM connection: {response}")
+
     except subprocess.CalledProcessError as e:
         logging.error(f"Failed to disconnect: {e}")
-
-def get_location_info():
-    try:
-        result = subprocess.run(['sudo', 'mmcli', '-m', '0', '--location-get'], capture_output=True, text=True, check=True)
-        return result.stdout
-    except subprocess.CalledProcessError as e:
-        logging.error(f"Failed to get location info: {e}")
-        return None
-
-def get_at_response():
-    try:
-        result = subprocess.run(['echo -ne "AT+CPSI?\r\n" | picocom -qrx 1000 /dev/tty4GPI'], capture_output=True, text=True, shell=True, check=True)
-        return result.stdout
-    except subprocess.CalledProcessError as e:
-        logging.error(f"Failed to get AT response: {e}")
-        return None
 
 def check_status():
     from main import GOOGLE_SERVER, BROKER_ADDRESS, LOG_DIR, MQTT_DIR, RADIO_LOG_DIR, MQTT_RADIO_DIR
@@ -107,24 +151,24 @@ def radio_status(radio_log_dir, mqtt_radio_dir):
     tokyo_tz = ZoneInfo("Asia/Tokyo")
     timestamp = datetime.now(timezone.utc).astimezone(tokyo_tz).isoformat()
 
-    # 位置情報を取得
-    location_info = get_location_info()
-
     # ATコマンドの応答を取得
-    at_response = get_at_response()
+    at_response = send_at_command('AT+CPSI?\r\n')
+    parsed_response = parse_cpsi_response(at_response)
 
-    data = {
-        "ts": timestamp,
-        "location_info": location_info,
-        "at_response": at_response
-    }
+    if parsed_response:
+        data = {
+            "ts": timestamp,
+            **parsed_response  # parsed_responseの内容を直接含める
+        }
 
-    # ラジオステータスとして保存
-    save_data(data, radio_log_dir, 'radio_status')
+        # ラジオステータスとして保存
+        save_data(data, radio_log_dir, 'radio_status')
 
-    # MQTT用のデータとして保存
-    save_data(data, mqtt_radio_dir, 'radio_status')
+        # MQTT用のデータとして保存
+        save_data(data, mqtt_radio_dir, 'radio_status')
 
-    # 古いデータの削除
-    delete_old_data(radio_log_dir)
-    delete_old_data(mqtt_radio_dir)
+        # 古いデータの削除
+        delete_old_data(radio_log_dir)
+        delete_old_data(mqtt_radio_dir)
+    else:
+        logging.error("Failed to parse radio status response")
