@@ -5,8 +5,8 @@ from datetime import datetime, timezone
 import os
 import logging
 
-# ユーザーのホームディレクトリ内にログディレクトリを設定
-LOG_DIR_PATH = os.path.expanduser('~/mqtt_to_cloudwatch_logs')
+# プロジェクトディレクトリ内にログディレクトリを設定
+LOG_DIR_PATH = os.path.expanduser('log')
 
 # ログディレクトリが存在しない場合に作成
 if not os.path.exists(LOG_DIR_PATH):
@@ -22,8 +22,8 @@ ICCID = "89882280xxxxxxxxx"  # 実際のICCIDに置き換えてください
 TOPIC = f"devices/{ICCID}/data"
 TOPIC_RADIO = f"devices/{ICCID}/radio"
 GOOGLE_SERVER = '8.8.8.8'
-LOG_DIR = 'data/log'
-MQTT_DIR = 'data/mqtt_data'
+LOG_DIR = 'data/network_log'
+MQTT_DIR = 'data/mqtt_network_data'
 RADIO_LOG_DIR = 'data/radio_log'
 MQTT_RADIO_DIR = 'data/mqtt_radio_data'
 

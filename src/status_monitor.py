@@ -5,9 +5,10 @@ import os
 from zoneinfo import ZoneInfo  # タイムゾーンを扱うモジュール
 import subprocess
 import logging
+from main import LOG_DIR_PATH
 
 # ログ設定
-logging.basicConfig(level=logging.INFO, format='%(asctime)s - %(levelname)s - %(message)s', filename='/var/log/mqtt_to_cloudwatch/main.log')
+logging.basicConfig(level=logging.INFO, format='%(asctime)s - %(levelname)s - %(message)s', filename=os.path.join(LOG_DIR_PATH, 'main.log'))
 
 def save_data(data, data_dir, prefix):
     timestamp = data['ts']

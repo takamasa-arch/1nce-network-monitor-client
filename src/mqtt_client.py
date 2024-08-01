@@ -3,8 +3,10 @@ import json
 import os
 import logging
 from datetime import datetime, timezone
+from main import LOG_DIR_PATH
 
-logging.basicConfig(level=logging.INFO, format='%(asctime)s - %(levelname)s - %(message)s')
+# ログ設定
+logging.basicConfig(level=logging.INFO, format='%(asctime)s - %(levelname)s - %(message)s', filename=os.path.join(LOG_DIR_PATH, 'main.log'))
 
 def load_all_data(data_dir):
     files = [os.path.join(data_dir, f) for f in os.listdir(data_dir) if f.endswith('.json')]
