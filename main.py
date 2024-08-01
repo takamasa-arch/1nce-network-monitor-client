@@ -1,12 +1,10 @@
 from src.status_monitor import check_status
 from src.mqtt_client import send_mqtt_data, send_mqtt_radio_data
+from config import LOG_DIR_PATH, LOG_DIR, MQTT_DIR, RADIO_LOG_DIR, MQTT_RADIO_DIR
 import time
 from datetime import datetime, timezone
 import os
 import logging
-
-# プロジェクトディレクトリ内にログディレクトリを設定
-LOG_DIR_PATH = os.path.expanduser('log')
 
 # ログディレクトリが存在しない場合に作成
 if not os.path.exists(LOG_DIR_PATH):
@@ -14,18 +12,6 @@ if not os.path.exists(LOG_DIR_PATH):
 
 # ログ設定
 logging.basicConfig(level=logging.INFO, format='%(asctime)s - %(levelname)s - %(message)s', filename=os.path.join(LOG_DIR_PATH, 'main.log'))
-
-# グローバル変数
-BROKER_ADDRESS = "VPN_IP_ADDRESS"  # MQTT BrokerのIPに置き換えてください
-PORT = 1883
-ICCID = "89882280xxxxxxxxx"  # 実際のICCIDに置き換えてください
-TOPIC = f"devices/{ICCID}/data"
-TOPIC_RADIO = f"devices/{ICCID}/radio"
-GOOGLE_SERVER = '8.8.8.8'
-LOG_DIR = 'data/network_log'
-MQTT_DIR = 'data/mqtt_network_data'
-RADIO_LOG_DIR = 'data/radio_log'
-MQTT_RADIO_DIR = 'data/mqtt_radio_data'
 
 def main():
     try:

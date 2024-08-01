@@ -5,7 +5,7 @@ import os
 from zoneinfo import ZoneInfo  # タイムゾーンを扱うモジュール
 import subprocess
 import logging
-from main import LOG_DIR_PATH
+from config import LOG_DIR_PATH, LOG_DIR, MQTT_DIR, RADIO_LOG_DIR, MQTT_RADIO_DIR, GOOGLE_SERVER, BROKER_ADDRESS
 
 # ログ設定
 logging.basicConfig(level=logging.INFO, format='%(asctime)s - %(levelname)s - %(message)s', filename=os.path.join(LOG_DIR_PATH, 'main.log'))
@@ -101,7 +101,6 @@ def disconnect_gsm():
         logging.error(f"Failed to disconnect: {e}")
 
 def check_status():
-    from main import GOOGLE_SERVER, BROKER_ADDRESS, LOG_DIR, MQTT_DIR, RADIO_LOG_DIR, MQTT_RADIO_DIR
 
     # タイムゾーンを東京に設定
     tokyo_tz = ZoneInfo("Asia/Tokyo")

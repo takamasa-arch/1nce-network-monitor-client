@@ -3,7 +3,7 @@ import json
 import os
 import logging
 from datetime import datetime, timezone
-from main import LOG_DIR_PATH
+from config import LOG_DIR_PATH, LOG_DIR, MQTT_DIR, RADIO_LOG_DIR, MQTT_RADIO_DIR, GOOGLE_SERVER, BROKER_ADDRESS
 
 # ログ設定
 logging.basicConfig(level=logging.INFO, format='%(asctime)s - %(levelname)s - %(message)s', filename=os.path.join(LOG_DIR_PATH, 'main.log'))
@@ -31,7 +31,6 @@ def on_publish(client, userdata, mid):
     logging.info(f"Message {mid} has been published.")
 
 def send_mqtt_data():
-    from main import BROKER_ADDRESS, PORT, TOPIC, MQTT_DIR
 
     client = mqtt.Client()
     client.on_connect = on_connect
@@ -76,7 +75,6 @@ def send_mqtt_data():
     return publish_successful
 
 def send_mqtt_radio_data():
-    from main import BROKER_ADDRESS, PORT, TOPIC_RADIO, MQTT_RADIO_DIR
 
     client = mqtt.Client()
     client.on_connect = on_connect
