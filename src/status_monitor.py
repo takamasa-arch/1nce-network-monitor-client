@@ -30,11 +30,12 @@ def delete_old_data(data_dir, days=7):
 
 def send_at_command(command):
     try:
-        result = subprocess.run(['echo', '-ne', command, '|', 'picocom', '-qrx', '1000', '/dev/tty4GPI'], capture_output=True, text=True, shell=True, check=True)
+        result = subprocess.run(f'echo -ne "{command}" | picocom -qrx 1000 /dev/tty4GPI', capture_output=True, text=True, shell=True, check=True)
         return result.stdout
     except subprocess.CalledProcessError as e:
         logging.error(f"Failed to send AT command: {e}")
         return None
+
 
 def parse_cpsi_response(response):
     try:
