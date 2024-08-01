@@ -15,7 +15,7 @@ if not os.path.exists(LOG_DIR_PATH):
 logging.basicConfig(level=logging.INFO, format='%(asctime)s - %(levelname)s - %(message)s', filename=os.path.join(LOG_DIR_PATH, 'main.log'))
 
 def save_data(data, data_dir, prefix):
-    timestamp = data['ts']
+    timestamp = data['ts'].replace(':', '-').replace('T', '_')  # 特殊文字を置換
     filename = os.path.join(data_dir, f"{prefix}_{timestamp}.json")
     with open(filename, 'w') as f:
         json.dump(data, f)
