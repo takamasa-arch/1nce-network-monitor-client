@@ -1,4 +1,4 @@
-from src.status_monitor import check_status
+from src.status_monitor import check_status, disconnect_gsm
 from src.mqtt_client import send_mqtt_data, send_mqtt_radio_data
 from config import LOG_DIR_PATH, LOG_DIR, MQTT_DIR, RADIO_LOG_DIR, MQTT_RADIO_DIR
 import time
@@ -40,7 +40,7 @@ def main():
 
             # 1分ごとにステータスチェック
             try:
-                check_status()
+                lu_status = check_status()
             except Exception as e:
                 logging.error(f"Error in check_status: {e}")
 
@@ -51,6 +51,10 @@ def main():
                         last_send_time = current_time
                 except Exception as e:
                     logging.error(f"Error in sending MQTT data: {e}")
+
+            # 全ての処理が終わったら、GSM接続を切断
+            if lu_status == 1:
+                disconnect_gsm()
 
             time.sleep(ping_interval)
 

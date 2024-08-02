@@ -35,6 +35,7 @@ def delete_old_data(data_dir, days=7):
             timestamp = datetime.strptime(timestamp_str, '%Y-%m-%d-%H-%M-%S').replace(tzinfo=timezone.utc)
             if timestamp < cutoff:
                 os.remove(file)
+                logging.info(f"Deleted old file: {file}")
         except ValueError as e:
             logging.error(f"Failed to parse date from filename: {file}, error: {e}")
 
@@ -44,6 +45,7 @@ def send_at_command(command):
             f'echo -ne "{command}" | picocom -qrx 1000 /dev/tty4GPI',
             capture_output=True, text=True, shell=True, check=True
         )
+        logging.info(f"AT command sent: {command.strip()}")
         return result.stdout
     except subprocess.CalledProcessError as e:
         logging.error(f"Failed to send AT command: {e}")
@@ -57,6 +59,7 @@ def parse_cpsi_response(response):
                 if line.startswith('+CPSI:'):
                     parts = line.split(',')
                     if len(parts) >= 13:
+                        logging.info(f"Parsed CPSI response: {response.strip()}")
                         return {
                             "RSRQ": parts[10].strip(),
                             "RSRP": parts[11].strip(),
@@ -122,6 +125,8 @@ def check_status():
     tokyo_tz = ZoneInfo("Asia/Tokyo")
     timestamp = datetime.now(timezone.utc).astimezone(tokyo_tz).strftime('%Y-%m-%d-%H-%M-%S')  # タイムスタンプをファイル名に使用できる形式に変換
 
+    logging.info("Starting network status check")
+
     # GSM接続の確立
     lu_status = 1 if connect_gsm() else 0
 
@@ -129,14 +134,17 @@ def check_status():
     if lu_status == 0:
         pg_status = 0
         po_status = 0
+        logging.error("GSM connection failed, setting all status flags to 0")
     else:
         # Googleサーバーへのpingの結果を取得
         ping_result = ping(GOOGLE_SERVER)
         pg_status = 1 if ping_result else 0
+        logging.info(f"Ping Google server status: {'Success' if pg_status else 'Failure'}")
 
         # OpenVPN Clientサーバーへのpingの結果を取得
         ping_result = ping(BROKER_ADDRESS)
         po_status = 1 if ping_result else 0
+        logging.info(f"Ping OpenVPN server status: {'Success' if po_status else 'Failure'}")
 
     data = {
         "ts": timestamp,
@@ -147,25 +155,28 @@ def check_status():
 
     # ステータスデータとして保存
     save_data(data, LOG_DIR, 'status')
+    logging.info("Network status data saved")
 
     # MQTT用のデータとして保存
     save_data(data, MQTT_DIR, 'status')
+    logging.info("MQTT status data saved")
 
-    # GSM接続の切断前にラジオステータスを取得
-    if lu_status == 1:
-        radio_status(RADIO_LOG_DIR, MQTT_RADIO_DIR)
-
-        # GSM接続の切断
-        disconnect_gsm()
+    # ラジオステータスを取得
+    radio_status(RADIO_LOG_DIR, MQTT_RADIO_DIR)
 
     # 古いデータの削除
     delete_old_data(LOG_DIR)
     delete_old_data(MQTT_DIR)
 
+    logging.info("Completed network status check")
+    return lu_status  # GSM接続状態を返す
+
 def radio_status(radio_log_dir, mqtt_radio_dir):
     # タイムゾーンを東京に設定
     tokyo_tz = ZoneInfo("Asia/Tokyo")
     timestamp = datetime.now(timezone.utc).astimezone(tokyo_tz).strftime('%Y-%m-%d-%H-%M-%S')  # タイムスタンプをファイル名に使用できる形式に変換
+
+    logging.info("Starting radio status check")
 
     # ATコマンドの応答を取得
     at_response = send_at_command('AT+CPSI?\r\n')
@@ -179,12 +190,17 @@ def radio_status(radio_log_dir, mqtt_radio_dir):
 
         # ラジオステータスとして保存
         save_data(data, radio_log_dir, 'radio_status')
+        logging.info("Radio status data saved")
 
         # MQTT用のデータとして保存
         save_data(data, mqtt_radio_dir, 'radio_status')
+        logging.info("MQTT radio status data saved")
 
         # 古いデータの削除
         delete_old_data(radio_log_dir)
         delete_old_data(mqtt_radio_dir)
+
     else:
         logging.error("Failed to parse radio status response")
+
+    logging.info("Completed radio status check")
