@@ -41,8 +41,11 @@ def main():
             # 1分ごとにステータスチェック
             try:
                 lu_status = check_status()
+                if lu_status not in [0, 1]:
+                    raise ValueError(f"Unexpected lu_status value: {lu_status}")
             except Exception as e:
                 logging.error(f"Error in check_status: {e}")
+                lu_status = 0  # デフォルトで0に設定
 
             # 5分ごとにMQTTでデータ送信
             if (current_time - last_send_time).total_seconds() >= send_interval:
