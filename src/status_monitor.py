@@ -15,7 +15,7 @@ if not os.path.exists(LOG_DIR_PATH):
 logging.basicConfig(level=logging.INFO, format='%(asctime)s - %(levelname)s - %(message)s', filename=os.path.join(LOG_DIR_PATH, 'main.log'))
 
 def save_data(data, data_dir, prefix):
-    timestamp = data['ts'].replace(':', '-').replace('T', '_')  # 特殊文字を置換
+    timestamp = data['ts']
     filename = os.path.join(data_dir, f"{prefix}_{timestamp}.json")
     with open(filename, 'w') as f:
         json.dump(data, f)
@@ -35,7 +35,6 @@ def send_at_command(command):
     except subprocess.CalledProcessError as e:
         logging.error(f"Failed to send AT command: {e}")
         return None
-
 
 def parse_cpsi_response(response):
     try:
@@ -109,7 +108,7 @@ def check_status():
 
     # タイムゾーンを東京に設定
     tokyo_tz = ZoneInfo("Asia/Tokyo")
-    timestamp = datetime.now(timezone.utc).astimezone(tokyo_tz).isoformat()
+    timestamp = datetime.now(timezone.utc).astimezone(tokyo_tz).strftime('%Y-%m-%d_%H-%M-%S')  # タイムスタンプをファイル名に使用できる形式に変換
 
     # GSM接続の確立
     lu_status = 1 if connect_gsm() else 0
@@ -154,7 +153,7 @@ def check_status():
 def radio_status(radio_log_dir, mqtt_radio_dir):
     # タイムゾーンを東京に設定
     tokyo_tz = ZoneInfo("Asia/Tokyo")
-    timestamp = datetime.now(timezone.utc).astimezone(tokyo_tz).isoformat()
+    timestamp = datetime.now(timezone.utc).astimezone(tokyo_tz).strftime('%Y-%m-%d_%H-%M-%S')  # タイムスタンプをファイル名に使用できる形式に変換
 
     # ATコマンドの応答を取得
     at_response = send_at_command('AT+CPSI?\r\n')
