@@ -3,7 +3,7 @@ import json
 import os
 import logging
 from datetime import datetime, timezone
-from config import LOG_DIR_PATH, LOG_DIR, MQTT_DIR, RADIO_LOG_DIR, MQTT_RADIO_DIR, GOOGLE_SERVER, BROKER_ADDRESS
+from config import LOG_DIR_PATH, PORT, MQTT_DIR, MQTT_RADIO_DIR, BROKER_ADDRESS
 
 # ログディレクトリが存在しない場合に作成
 if not os.path.exists(LOG_DIR_PATH):

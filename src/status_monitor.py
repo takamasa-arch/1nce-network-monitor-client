@@ -24,9 +24,15 @@ def delete_old_data(data_dir, days=7):
     cutoff = datetime.now(timezone.utc) - timedelta(days=days)
     files = [os.path.join(data_dir, f) for f in os.listdir(data_dir) if f.endswith('.json')]
     for file in files:
-        timestamp = datetime.fromisoformat(file.replace(data_dir + '/', '').replace('.json', ''))
-        if timestamp < cutoff:
-            os.remove(file)
+        try:
+            # ファイル名からプレフィックスを除去し、タイムスタンプ部分を抽出
+            timestamp_str = file.split('_')[-1].replace('.json', '')
+            # タイムスタンプを datetime オブジェクトに変換
+            timestamp = datetime.strptime(timestamp_str, '%Y-%m-%d_%H-%M-%S')
+            if timestamp < cutoff:
+                os.remove(file)
+        except ValueError as e:
+            logging.error(f"Failed to parse date from filename: {file}, error: {e}")
 
 def send_at_command(command):
     try:
@@ -56,7 +62,7 @@ def parse_cpsi_response(response):
 
 def connect_gsm():
     try:
-        # Activate the GSM connection using AT+CFUN=1
+        # GSM接続の確立
         response = send_at_command('AT+CFUN=1\r\n')
         if response and "OK" in response:
             logging.info("GSM connection activated")
@@ -64,7 +70,7 @@ def connect_gsm():
             logging.error(f"Failed to activate GSM connection: {response}")
             return False
 
-        # Check if the SIM is ready
+        # SIMの準備を確認
         response = send_at_command('AT+CPIN?\r\n')
         if response and "+CPIN: READY" in response:
             logging.info("SIM is ready")
@@ -72,13 +78,13 @@ def connect_gsm():
             logging.error(f"SIM is not ready: {response}")
             return False
 
-        # Check if PDP context is active
+        # PDPコンテキストのアクティブ状態を確認
         response = send_at_command('AT+CGATT?\r\n')
         if response and "+CGATT: 1" in response:
             logging.info("PDP context is active")
         else:
             logging.error(f"PDP context is not active: {response}")
-            # Try to activate PDP context
+            # PDPコンテキストをアクティブにしようと試みる
             response = send_at_command('AT+CGATT=1\r\n')
             if response and "OK" in response:
                 logging.info("PDP context activated")
@@ -94,13 +100,12 @@ def connect_gsm():
 
 def disconnect_gsm():
     try:
-        # Deactivate the GSM connection using AT+CFUN=0
+        # GSM接続の切断
         response = send_at_command('AT+CFUN=0\r\n')
         if response and "OK" in response:
             logging.info("GSM connection deactivated")
         else:
             logging.error(f"Failed to deactivate GSM connection: {response}")
-
     except subprocess.CalledProcessError as e:
         logging.error(f"Failed to disconnect: {e}")
 
