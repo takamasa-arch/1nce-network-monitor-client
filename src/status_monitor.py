@@ -28,7 +28,7 @@ def delete_old_data(data_dir, days=7):
             # ファイル名からプレフィックスを除去し、タイムスタンプ部分を抽出
             timestamp_str = file.split('_')[-1].replace('.json', '')
             # タイムスタンプを datetime オブジェクトに変換
-            timestamp = datetime.strptime(timestamp_str, '%Y-%m-%d_%H-%M-%S')
+            timestamp = datetime.strptime(timestamp_str, '%Y-%m-%d-%H-%M-%S')
             if timestamp < cutoff:
                 os.remove(file)
         except ValueError as e:
@@ -113,7 +113,7 @@ def check_status():
 
     # タイムゾーンを東京に設定
     tokyo_tz = ZoneInfo("Asia/Tokyo")
-    timestamp = datetime.now(timezone.utc).astimezone(tokyo_tz).strftime('%Y-%m-%d_%H-%M-%S')  # タイムスタンプをファイル名に使用できる形式に変換
+    timestamp = datetime.now(timezone.utc).astimezone(tokyo_tz).strftime('%Y-%m-%d-%H-%M-%S')  # タイムスタンプをファイル名に使用できる形式に変換
 
     # GSM接続の確立
     lu_status = 1 if connect_gsm() else 0
@@ -158,7 +158,7 @@ def check_status():
 def radio_status(radio_log_dir, mqtt_radio_dir):
     # タイムゾーンを東京に設定
     tokyo_tz = ZoneInfo("Asia/Tokyo")
-    timestamp = datetime.now(timezone.utc).astimezone(tokyo_tz).strftime('%Y-%m-%d_%H-%M-%S')  # タイムスタンプをファイル名に使用できる形式に変換
+    timestamp = datetime.now(timezone.utc).astimezone(tokyo_tz).strftime('%Y-%m-%d-%H-%M-%S')  # タイムスタンプをファイル名に使用できる形式に変換
 
     # ATコマンドの応答を取得
     at_response = send_at_command('AT+CPSI?\r\n')

@@ -3,7 +3,7 @@ import json
 import os
 import logging
 from datetime import datetime, timezone
-from config import LOG_DIR_PATH, PORT, MQTT_DIR, MQTT_RADIO_DIR, BROKER_ADDRESS
+from config import LOG_DIR_PATH, PORT, MQTT_DIR, MQTT_RADIO_DIR, BROKER_ADDRESS, TOPIC, TOPIC_RADIO
 
 # ログディレクトリが存在しない場合に作成
 if not os.path.exists(LOG_DIR_PATH):
@@ -35,7 +35,6 @@ def on_publish(client, userdata, mid):
     logging.info(f"Message {mid} has been published.")
 
 def send_mqtt_data():
-
     client = mqtt.Client()
     client.on_connect = on_connect
     client.on_message = on_message
@@ -79,7 +78,6 @@ def send_mqtt_data():
     return publish_successful
 
 def send_mqtt_radio_data():
-
     client = mqtt.Client()
     client.on_connect = on_connect
     client.on_message = on_message
