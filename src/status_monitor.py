@@ -6,17 +6,8 @@ from zoneinfo import ZoneInfo  # タイムゾーンを扱うモジュール
 import subprocess
 import logging
 from logging.handlers import TimedRotatingFileHandler
-from config import LOG_DIR_PATH, LOG_DIR, MQTT_DIR, RADIO_LOG_DIR, MQTT_RADIO_DIR, GOOGLE_SERVER, BROKER_ADDRESS
+from config import LOG_DIR, MQTT_DIR, RADIO_LOG_DIR, MQTT_RADIO_DIR, GOOGLE_SERVER, BROKER_ADDRESS
 
-# ログディレクトリが存在しない場合に作成
-if not os.path.exists(LOG_DIR_PATH):
-    os.makedirs(LOG_DIR_PATH, exist_ok=True)
-
-# ログ設定 (ログローテーションを7日間に設定)
-log_file = os.path.join(LOG_DIR_PATH, 'main.log')
-handler = TimedRotatingFileHandler(log_file, when='midnight', interval=1, backupCount=7)
-handler.setFormatter(logging.Formatter('%(asctime)s - %(levelname)s - %(message)s'))
-logging.basicConfig(level=logging.INFO, handlers=[handler])
 
 def save_data(data, data_dir, prefix):
     timestamp = data['ts']
@@ -130,6 +121,8 @@ def check_status():
     # GSM接続の確立
     lu_status = 1 if connect_gsm() else 0
 
+
+
     # 接続が失敗した場合、残りのステータスはすべて0
     if lu_status == 0:
         pg_status = 0
@@ -139,10 +132,12 @@ def check_status():
         logging.error("GSM connection failed, setting all status flags to 0")
     else:
         # Googleサーバーへのpingの結果を取得
+        latency_pg = ping(GOOGLE_SERVER)
         pg_status = 1 if latency_pg else 0
         logging.info(f"Ping Google server status: {'Success' if pg_status else 'Failure'}, latency: {latency_pg} ms")
 
         # OpenVPN Clientサーバーへのpingの結果を取得
+        latency_po = ping(BROKER_ADDRESS)
         po_status = 1 if latency_po else 0
         logging.info(f"Ping OpenVPN server status: {'Success' if po_status else 'Failure'}, latency: {latency_po} ms")
 
@@ -162,7 +157,7 @@ def check_status():
     logging.info("MQTT status data saved")
 
     # ラジオステータスを取得
-    radio_status(RADIO_LOG_DIR, MQTT_RADIO_DIR)
+    radio_status(RADIO_LOG_DIR, MQTT_RADIO_DIR, latency_pg, latency_po)
 
     # 古いデータの削除
     delete_old_data(LOG_DIR)
@@ -171,7 +166,7 @@ def check_status():
     logging.info("Completed network status check")
     return lu_status  # GSM接続状態を返す
 
-def radio_status(radio_log_dir, mqtt_radio_dir):
+def radio_status(radio_log_dir, mqtt_radio_dir, latency_pg, latency_po):
     # タイムゾーンを東京に設定
     tokyo_tz = ZoneInfo("Asia/Tokyo")
     timestamp = datetime.now(timezone.utc).astimezone(tokyo_tz).strftime('%Y-%m-%d-%H-%M-%S')  # タイムスタンプをファイル名に使用できる形式に変換
@@ -181,10 +176,6 @@ def radio_status(radio_log_dir, mqtt_radio_dir):
     # ATコマンドの応答を取得
     at_response = send_at_command('AT+CPSI?\r\n')
     parsed_response = parse_cpsi_response(at_response)
-
-    # GoogleとOpenVPNへのPingの結果を取得
-    latency_pg = ping(GOOGLE_SERVER)
-    latency_po = ping(BROKER_ADDRESS)
 
     if parsed_response:
         data = {
