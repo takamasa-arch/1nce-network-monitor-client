@@ -5,13 +5,23 @@ import time
 from datetime import datetime, timezone
 import os
 import logging
+from logging.handlers import TimedRotatingFileHandler
 
 # ログディレクトリが存在しない場合に作成
 if not os.path.exists(LOG_DIR_PATH):
     os.makedirs(LOG_DIR_PATH, exist_ok=True)
 
-# ログ設定
-logging.basicConfig(level=logging.INFO, format='%(asctime)s - %(levelname)s - %(message)s', filename=os.path.join(LOG_DIR_PATH, 'main.log'))
+# ログ設定 - TimedRotatingFileHandlerを使用して7日間のログを保持
+log_filename = os.path.join(LOG_DIR_PATH, 'main.log')
+handler = TimedRotatingFileHandler(log_filename, when="midnight", interval=1, backupCount=7)
+handler.suffix = "%Y-%m-%d"  # ログファイルの名前に日付を追加
+
+formatter = logging.Formatter('%(asctime)s - %(levelname)s - %(message)s')
+handler.setFormatter(formatter)
+
+logger = logging.getLogger()
+logger.setLevel(logging.INFO)
+logger.addHandler(handler)
 
 def main():
     try:
@@ -23,10 +33,10 @@ def main():
 
         ping_interval = 60  # 1分おき
         send_interval = 300  # 5分おき
-        last_send_time = datetime.now(timezone.utc)
+        last_send_time = datetime.now(timezone.utc)  # タイムゾーンをUTCに統一
 
         while True:
-            current_time = datetime.now(timezone.utc)
+            current_time = datetime.now(timezone.utc)  # タイムゾーンをUTCに統一
 
             # 1分ごとにステータスチェック
             try:

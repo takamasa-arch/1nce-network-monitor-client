@@ -2,6 +2,7 @@ import paho.mqtt.client as mqtt
 import json
 import os
 import logging
+from logging.handlers import TimedRotatingFileHandler
 from datetime import datetime, timezone
 from config import LOG_DIR_PATH, PORT, MQTT_DIR, MQTT_RADIO_DIR, BROKER_ADDRESS, TOPIC, TOPIC_RADIO
 
@@ -9,8 +10,11 @@ from config import LOG_DIR_PATH, PORT, MQTT_DIR, MQTT_RADIO_DIR, BROKER_ADDRESS,
 if not os.path.exists(LOG_DIR_PATH):
     os.makedirs(LOG_DIR_PATH, exist_ok=True)
 
-# ログ設定
-logging.basicConfig(level=logging.INFO, format='%(asctime)s - %(levelname)s - %(message)s', filename=os.path.join(LOG_DIR_PATH, 'main.log'))
+# ログ設定 (ログローテーションを7日間に設定)
+log_file = os.path.join(LOG_DIR_PATH, 'main.log')
+handler = TimedRotatingFileHandler(log_file, when='midnight', interval=1, backupCount=7)
+handler.setFormatter(logging.Formatter('%(asctime)s - %(levelname)s - %(message)s'))
+logging.basicConfig(level=logging.INFO, handlers=[handler])
 
 def load_all_data(data_dir):
     files = [os.path.join(data_dir, f) for f in os.listdir(data_dir) if f.endswith('.json')]

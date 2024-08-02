@@ -5,14 +5,18 @@ import os
 from zoneinfo import ZoneInfo  # タイムゾーンを扱うモジュール
 import subprocess
 import logging
+from logging.handlers import TimedRotatingFileHandler
 from config import LOG_DIR_PATH, LOG_DIR, MQTT_DIR, RADIO_LOG_DIR, MQTT_RADIO_DIR, GOOGLE_SERVER, BROKER_ADDRESS
 
 # ログディレクトリが存在しない場合に作成
 if not os.path.exists(LOG_DIR_PATH):
     os.makedirs(LOG_DIR_PATH, exist_ok=True)
 
-# ログ設定
-logging.basicConfig(level=logging.INFO, format='%(asctime)s - %(levelname)s - %(message)s', filename=os.path.join(LOG_DIR_PATH, 'main.log'))
+# ログ設定 (ログローテーションを7日間に設定)
+log_file = os.path.join(LOG_DIR_PATH, 'main.log')
+handler = TimedRotatingFileHandler(log_file, when='midnight', interval=1, backupCount=7)
+handler.setFormatter(logging.Formatter('%(asctime)s - %(levelname)s - %(message)s'))
+logging.basicConfig(level=logging.INFO, handlers=[handler])
 
 def save_data(data, data_dir, prefix):
     timestamp = data['ts']
@@ -28,7 +32,7 @@ def delete_old_data(data_dir, days=7):
             # ファイル名からプレフィックスを除去し、タイムスタンプ部分を抽出
             timestamp_str = file.split('_')[-1].replace('.json', '')
             # タイムスタンプを datetime オブジェクトに変換
-            timestamp = datetime.strptime(timestamp_str, '%Y-%m-%d-%H-%M-%S')
+            timestamp = datetime.strptime(timestamp_str, '%Y-%m-%d-%H-%M-%S').replace(tzinfo=timezone.utc)
             if timestamp < cutoff:
                 os.remove(file)
         except ValueError as e:
@@ -36,7 +40,10 @@ def delete_old_data(data_dir, days=7):
 
 def send_at_command(command):
     try:
-        result = subprocess.run(f'echo -ne "{command}" | picocom -qrx 1000 /dev/tty4GPI', capture_output=True, text=True, shell=True, check=True)
+        result = subprocess.run(
+            f'echo -ne "{command}" | picocom -qrx 1000 /dev/tty4GPI',
+            capture_output=True, text=True, shell=True, check=True
+        )
         return result.stdout
     except subprocess.CalledProcessError as e:
         logging.error(f"Failed to send AT command: {e}")
@@ -51,10 +58,10 @@ def parse_cpsi_response(response):
                     parts = line.split(',')
                     if len(parts) >= 13:
                         return {
-                            "RSRQ": parts[10],
-                            "RSRP": parts[11],
-                            "RSSI": parts[12],
-                            "SNR": parts[13]
+                            "RSRQ": parts[10].strip(),
+                            "RSRP": parts[11].strip(),
+                            "RSSI": parts[12].strip(),
+                            "SNR": parts[13].strip()
                         }
     except Exception as e:
         logging.error(f"Failed to parse CPSI response: {e}")

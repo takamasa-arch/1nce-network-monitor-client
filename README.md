@@ -66,17 +66,11 @@ LOG_DIR = 'data/log'
 MQTT_DIR = 'data/mqtt_data'
 ```
 
-3. Create the necessary directories:
-```sh
-mkdir -p data/log
-mkdir -p data/mqtt_data
-```
-
-4. Create a systemd service file to run the main script as a daemon. For example, create a file named mqtt_network_monitor.service in the /etc/systemd/system/ directory with the following content:
+3. Create a systemd service file to run the main script as a daemon. For example, create a file named mqtt_network_monitor.service in the /etc/systemd/system/ directory with the following content:
 
 ```ini
 [Unit]
-Description=MQTT Network Monitor
+Description=1NCE Network Monitor
 After=network.target
 
 [Service]
@@ -96,8 +90,8 @@ Replace /path/to/your/repository with the actual path to your cloned repository.
 Reload and enable systemd to apply the new service:
 ```sh
 sudo systemctl daemon-reload
-sudo systemctl enable mqtt_network_monitor.service
-sudo systemctl start mqtt_network_monitor.service
+sudo systemctl enable 1nce_network_monitor.service
+sudo systemctl start 1nce_network_monitor.service
 ```
 
 ## File Descriptions
@@ -122,11 +116,6 @@ mqtt_client.py
   - send_mqtt_data(): Sends data to the MQTT broker and deletes the sent files from the local storage.
 Logging
 - Logs are saved in the /var/log/mqtt_to_cloudwatch directory. Ensure that the directory exists and has the appropriate permissions:
-
-```sh
-sudo mkdir -p /var/log/mqtt_to_cloudwatch
-sudo chown pi:pi /var/log/mqtt_to_cloudwatch
-```
 
 user and owner name should be changed with your environment
 
