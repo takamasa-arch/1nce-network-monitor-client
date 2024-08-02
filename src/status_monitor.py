@@ -134,23 +134,23 @@ def check_status():
     if lu_status == 0:
         pg_status = 0
         po_status = 0
+        latency_pg = None
+        latency_po = None
         logging.error("GSM connection failed, setting all status flags to 0")
     else:
         # Googleサーバーへのpingの結果を取得
-        ping_result = ping(GOOGLE_SERVER)
-        pg_status = 1 if ping_result else 0
-        logging.info(f"Ping Google server status: {'Success' if pg_status else 'Failure'}")
+        pg_status = 1 if latency_pg else 0
+        logging.info(f"Ping Google server status: {'Success' if pg_status else 'Failure'}, latency: {latency_pg} ms")
 
         # OpenVPN Clientサーバーへのpingの結果を取得
-        ping_result = ping(BROKER_ADDRESS)
-        po_status = 1 if ping_result else 0
-        logging.info(f"Ping OpenVPN server status: {'Success' if po_status else 'Failure'}")
+        po_status = 1 if latency_po else 0
+        logging.info(f"Ping OpenVPN server status: {'Success' if po_status else 'Failure'}, latency: {latency_po} ms")
 
     data = {
         "ts": timestamp,
         "lu": lu_status,  # Location update: 1 for success, 0 for failure
         "pg": pg_status,  # Ping Google server: 1 for success, 0 for failure
-        "po": po_status   # Ping OpenVPN server: 1 for success, 0 for failure
+        "po": po_status,   # Ping OpenVPN server: 1 for success, 0 for failure
     }
 
     # ステータスデータとして保存
@@ -182,10 +182,16 @@ def radio_status(radio_log_dir, mqtt_radio_dir):
     at_response = send_at_command('AT+CPSI?\r\n')
     parsed_response = parse_cpsi_response(at_response)
 
+    # GoogleとOpenVPNへのPingの結果を取得
+    latency_pg = ping(GOOGLE_SERVER)
+    latency_po = ping(BROKER_ADDRESS)
+
     if parsed_response:
         data = {
             "ts": timestamp,
-            **parsed_response  # parsed_responseの内容を直接含める
+            **parsed_response,  # parsed_responseの内容を直接含める
+            "latency_pg": latency_pg if latency_pg else None,  # Google server latency
+            "latency_po": latency_po if latency_po else None  # OpenVPN server latency
         }
 
         # ラジオステータスとして保存
