@@ -1,8 +1,9 @@
 import json
 from datetime import datetime, timezone, timedelta
-from ping3 import ping
+from ping3 import ping, exceptions
 import os
-from zoneinfo import ZoneInfo  # タイムゾーンを扱うモジュール
+import time  # 追加
+from zoneinfo import ZoneInfo
 import subprocess
 import logging
 from logging.handlers import TimedRotatingFileHandler
@@ -20,9 +21,7 @@ def delete_old_data(data_dir, days=7):
     files = [os.path.join(data_dir, f) for f in os.listdir(data_dir) if f.endswith('.json')]
     for file in files:
         try:
-            # ファイル名からプレフィックスを除去し、タイムスタンプ部分を抽出
             timestamp_str = file.split('_')[-1].replace('.json', '')
-            # タイムスタンプを datetime オブジェクトに変換
             timestamp = datetime.strptime(timestamp_str, '%Y-%m-%d-%H-%M-%S').replace(tzinfo=timezone.utc)
             if timestamp < cutoff:
                 os.remove(file)
@@ -63,7 +62,6 @@ def parse_cpsi_response(response):
 
 def connect_gsm():
     try:
-        # GSM接続の確立
         response = send_at_command('AT+CFUN=1\r\n')
         if response and "OK" in response:
             logging.info("GSM connection activated")
@@ -71,7 +69,8 @@ def connect_gsm():
             logging.error(f"Failed to activate GSM connection: {response}")
             return False
 
-        # SIMの準備を確認
+        time.sleep(1)  # 1秒の待機時間を追加
+
         response = send_at_command('AT+CPIN?\r\n')
         if response and "+CPIN: READY" in response:
             logging.info("SIM is ready")
@@ -79,13 +78,11 @@ def connect_gsm():
             logging.error(f"SIM is not ready: {response}")
             return False
 
-        # PDPコンテキストのアクティブ状態を確認
         response = send_at_command('AT+CGATT?\r\n')
         if response and "+CGATT: 1" in response:
             logging.info("PDP context is active")
         else:
             logging.error(f"PDP context is not active: {response}")
-            # PDPコンテキストをアクティブにしようと試みる
             response = send_at_command('AT+CGATT=1\r\n')
             if response and "OK" in response:
                 logging.info("PDP context activated")
@@ -101,7 +98,6 @@ def connect_gsm():
 
 def disconnect_gsm():
     try:
-        # GSM接続の切断
         response = send_at_command('AT+CFUN=0\r\n')
         if response and "OK" in response:
             logging.info("GSM connection deactivated")
@@ -111,19 +107,13 @@ def disconnect_gsm():
         logging.error(f"Failed to disconnect: {e}")
 
 def check_status():
-
-    # タイムゾーンを東京に設定
     tokyo_tz = ZoneInfo("Asia/Tokyo")
-    timestamp = datetime.now(timezone.utc).astimezone(tokyo_tz).strftime('%Y-%m-%d-%H-%M-%S')  # タイムスタンプをファイル名に使用できる形式に変換
+    timestamp = datetime.now(timezone.utc).astimezone(tokyo_tz).strftime('%Y-%m-%d-%H-%M-%S')
 
     logging.info("Starting network status check")
 
-    # GSM接続の確立
     lu_status = 1 if connect_gsm() else 0
 
-
-
-    # 接続が失敗した場合、残りのステータスはすべて0
     if lu_status == 0:
         pg_status = 0
         po_status = 0
@@ -131,69 +121,68 @@ def check_status():
         latency_po = None
         logging.error("GSM connection failed, setting all status flags to 0")
     else:
-        # Googleサーバーへのpingの結果を取得
-        latency_pg = ping(GOOGLE_SERVER)
-        pg_status = 1 if latency_pg else 0
-        logging.info(f"Ping Google server status: {'Success' if pg_status else 'Failure'}, latency: {latency_pg} ms")
+        try:
+            latency_pg = ping(GOOGLE_SERVER)
+            pg_status = 1 if latency_pg else 0
+            logging.info(f"Ping Google server status: {'Success' if pg_status else 'Failure'}, latency: {latency_pg} ms")
+        except exceptions.PingError as e:
+            pg_status = 0
+            latency_pg = None
+            logging.error(f"Ping to Google server failed: {e}")
 
-        # OpenVPN Clientサーバーへのpingの結果を取得
-        latency_po = ping(BROKER_ADDRESS)
-        po_status = 1 if latency_po else 0
-        logging.info(f"Ping OpenVPN server status: {'Success' if po_status else 'Failure'}, latency: {latency_po} ms")
+        try:
+            latency_po = ping(BROKER_ADDRESS)
+            po_status = 1 if latency_po else 0
+            logging.info(f"Ping OpenVPN server status: {'Success' if po_status else 'Failure'}, latency: {latency_po} ms")
+        except exceptions.PingError as e:
+            po_status = 0
+            latency_po = None
+            logging.error(f"Ping to OpenVPN server failed: {e}")
 
     data = {
         "ts": timestamp,
-        "lu": lu_status,  # Location update: 1 for success, 0 for failure
-        "pg": pg_status,  # Ping Google server: 1 for success, 0 for failure
-        "po": po_status,   # Ping OpenVPN server: 1 for success, 0 for failure
+        "lu": lu_status,
+        "pg": pg_status,
+        "po": po_status,
     }
 
-    # ステータスデータとして保存
     save_data(data, LOG_DIR, 'status')
     logging.info("Network status data saved")
 
-    # MQTT用のデータとして保存
     save_data(data, MQTT_DIR, 'status')
     logging.info("MQTT status data saved")
 
-    # ラジオステータスを取得
     radio_status(RADIO_LOG_DIR, MQTT_RADIO_DIR, latency_pg, latency_po)
 
-    # 古いデータの削除
     delete_old_data(LOG_DIR)
     delete_old_data(MQTT_DIR)
 
     logging.info("Completed network status check")
-    return lu_status  # GSM接続状態を返す
+    return lu_status
 
 def radio_status(radio_log_dir, mqtt_radio_dir, latency_pg, latency_po):
-    # タイムゾーンを東京に設定
     tokyo_tz = ZoneInfo("Asia/Tokyo")
-    timestamp = datetime.now(timezone.utc).astimezone(tokyo_tz).strftime('%Y-%m-%d-%H-%M-%S')  # タイムスタンプをファイル名に使用できる形式に変換
+    timestamp = datetime.now(timezone.utc).astimezone(tokyo_tz).strftime('%Y-%m-%d-%H-%M-%S')
 
     logging.info("Starting radio status check")
 
-    # ATコマンドの応答を取得
     at_response = send_at_command('AT+CPSI?\r\n')
     parsed_response = parse_cpsi_response(at_response)
 
     if parsed_response:
         data = {
             "ts": timestamp,
-            **parsed_response,  # parsed_responseの内容を直接含める
-            "latency_pg": latency_pg if latency_pg else None,  # Google server latency
-            "latency_po": latency_po if latency_po else None  # OpenVPN server latency
+            **parsed_response,
+            "latency_pg": latency_pg if latency_pg else None,
+            "latency_po": latency_po if latency_po else None
         }
 
-        # ラジオステータスとして保存
         save_data(data, radio_log_dir, 'radio_status')
         logging.info("Radio status data saved")
 
-        # MQTT用のデータとして保存
         save_data(data, mqtt_radio_dir, 'radio_status')
         logging.info("MQTT radio status data saved")
 
-        # 古いデータの削除
         delete_old_data(radio_log_dir)
         delete_old_data(mqtt_radio_dir)
 
