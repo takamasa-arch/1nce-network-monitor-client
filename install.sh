@@ -1,25 +1,42 @@
 #!/bin/bash
 
-# Check for required arguments
-if [ "$#" -ne 2 ]; then
-  echo "Usage: $0 <BROKER_IP> <ICCID>"
+# Function to display usage instructions
+usage() {
+  echo "Usage: $0 <BROKER_IP> <ICCID> [--skip-setup]"
   exit 1
+}
+
+# Check for required arguments
+if [ "$#" -lt 2 ]; then
+  usage
 fi
 
 BROKER_IP=$1
 ICCID=$2
+SKIP_SETUP=false
+
+# Check for optional --skip-setup flag
+if [ "$#" -eq 3 ] && [ "$3" == "--skip-setup" ]; then
+  SKIP_SETUP=true
+fi
+
 HOME_DIR=$(pwd)  # スクリプトを実行した場所を使用
 
-# Install python3-venv if it's not already installed
-sudo apt update
-sudo apt install -y python3-venv
+if [ "$SKIP_SETUP" = false ]; then
+  # Install python3-venv if it's not already installed
+  sudo apt update
+  sudo apt install -y python3-venv
 
-# Create a virtual environment
-python3 -m venv $HOME_DIR/venv
-source $HOME_DIR/venv/bin/activate
+  # Create a virtual environment
+  python3 -m venv $HOME_DIR/venv
+  source $HOME_DIR/venv/bin/activate
 
-# Install the required libraries
-pip install paho-mqtt ping3
+  # Install the required libraries
+  pip install paho-mqtt ping3
+else
+  # Activate the existing virtual environment
+  source $HOME_DIR/venv/bin/activate
+fi
 
 # Create or overwrite the config.py file
 cat <<EOL > $HOME_DIR/config.py
