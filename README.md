@@ -1,4 +1,4 @@
-# MQTT Network Monitor
+# 1NCE Network Monitor
 
 This repository contains a Python-based MQTT network monitoring system that periodically pings Google and OpenVPN servers, saves the results locally, and sends the data to an MQTT broker every 5 minutes. The system is divided into three main components:
 
@@ -13,9 +13,14 @@ This repository contains a Python-based MQTT network monitoring system that peri
 ├── src/
 │   ├── status_monitor.py
 │   └── mqtt_client.py
+└── log/
+│   └── main.log
 └── data/
-    ├── log
-    └── mqtt_data
+    ├── network_log
+    ├── mqtt_network_data
+    ├── radio_log
+    └── mqtt_radio_data
+
 
 ## Getting Started
 
@@ -74,10 +79,10 @@ Description=1NCE Network Monitor
 After=network.target
 
 [Service]
-ExecStart=/usr/bin/python3 /path/to/your/repository/main.py
+ExecStart=/path/to/your/venv/bin/python3 /path/to/your/repository/main.py
 WorkingDirectory=/path/to/your/repository
-StandardOutput=file:/var/log/mqtt_to_cloudwatch/output.log
-StandardError=file:/var/log/mqtt_to_cloudwatch/error.log
+StandardOutput=file:/path/to/your/repository/log/main.log
+StandardError=file:/path/to/your/repository/log/main.log
 Restart=always
 User=ubuntu
 
