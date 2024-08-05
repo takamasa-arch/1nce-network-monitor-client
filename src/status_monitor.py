@@ -1,21 +1,22 @@
 import json
 from datetime import datetime, timezone, timedelta
-from ping3 import ping, exceptions
+from ping3 import ping, errors
 import os
-import time  # 追加
+import time
 from zoneinfo import ZoneInfo
 import subprocess
 import logging
 from logging.handlers import TimedRotatingFileHandler
 from config import LOG_DIR, MQTT_DIR, RADIO_LOG_DIR, MQTT_RADIO_DIR, GOOGLE_SERVER, BROKER_ADDRESS
 
-
+# Save data function
 def save_data(data, data_dir, prefix):
     timestamp = data['ts']
     filename = os.path.join(data_dir, f"{prefix}_{timestamp}.json")
     with open(filename, 'w') as f:
         json.dump(data, f)
 
+# Delete old data function
 def delete_old_data(data_dir, days=7):
     cutoff = datetime.now(timezone.utc) - timedelta(days=days)
     files = [os.path.join(data_dir, f) for f in os.listdir(data_dir) if f.endswith('.json')]
@@ -29,6 +30,7 @@ def delete_old_data(data_dir, days=7):
         except ValueError as e:
             logging.error(f"Failed to parse date from filename: {file}, error: {e}")
 
+# Send AT command function
 def send_at_command(command):
     try:
         result = subprocess.run(
@@ -41,6 +43,7 @@ def send_at_command(command):
         logging.error(f"Failed to send AT command: {e}")
         return None
 
+# Parse CPSI response function
 def parse_cpsi_response(response):
     try:
         if response:
@@ -60,6 +63,7 @@ def parse_cpsi_response(response):
         logging.error(f"Failed to parse CPSI response: {e}")
     return None
 
+# Connect GSM function
 def connect_gsm():
     try:
         response = send_at_command('AT+CFUN=1\r\n')
@@ -96,6 +100,7 @@ def connect_gsm():
         logging.error(f"Failed to connect: {e}")
         return False
 
+# Disconnect GSM function
 def disconnect_gsm():
     try:
         response = send_at_command('AT+CFUN=0\r\n')
@@ -106,6 +111,7 @@ def disconnect_gsm():
     except subprocess.CalledProcessError as e:
         logging.error(f"Failed to disconnect: {e}")
 
+# Check network status function
 def check_status():
     tokyo_tz = ZoneInfo("Asia/Tokyo")
     timestamp = datetime.now(timezone.utc).astimezone(tokyo_tz).strftime('%Y-%m-%d-%H-%M-%S')
@@ -125,7 +131,7 @@ def check_status():
             latency_pg = ping(GOOGLE_SERVER)
             pg_status = 1 if latency_pg else 0
             logging.info(f"Ping Google server status: {'Success' if pg_status else 'Failure'}, latency: {latency_pg} ms")
-        except exceptions.PingError as e:
+        except Exception as e:
             pg_status = 0
             latency_pg = None
             logging.error(f"Ping to Google server failed: {e}")
@@ -134,7 +140,7 @@ def check_status():
             latency_po = ping(BROKER_ADDRESS)
             po_status = 1 if latency_po else 0
             logging.info(f"Ping OpenVPN server status: {'Success' if po_status else 'Failure'}, latency: {latency_po} ms")
-        except exceptions.PingError as e:
+        except Exception as e:
             po_status = 0
             latency_po = None
             logging.error(f"Ping to OpenVPN server failed: {e}")
@@ -160,6 +166,7 @@ def check_status():
     logging.info("Completed network status check")
     return lu_status
 
+# Check radio status function
 def radio_status(radio_log_dir, mqtt_radio_dir, latency_pg, latency_po):
     tokyo_tz = ZoneInfo("Asia/Tokyo")
     timestamp = datetime.now(timezone.utc).astimezone(tokyo_tz).strftime('%Y-%m-%d-%H-%M-%S')
