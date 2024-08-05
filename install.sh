@@ -2,7 +2,7 @@
 
 # Function to display usage instructions
 usage() {
-  echo "Usage: $0 <BROKER_IP> <ICCID> [--skip-setup]"
+  echo "Usage: $0 <BROKER_IP> <ICCID>"
   exit 1
 }
 
@@ -13,30 +13,28 @@ fi
 
 BROKER_IP=$1
 ICCID=$2
-SKIP_SETUP=false
-
-# Check for optional --skip-setup flag
-if [ "$#" -eq 3 ] && [ "$3" == "--skip-setup" ]; then
-  SKIP_SETUP=true
-fi
-
 HOME_DIR=$(pwd)  # スクリプトを実行した場所を使用
 
-if [ "$SKIP_SETUP" = false ]; then
-  # Install python3-venv if it's not already installed
-  sudo apt update
-  sudo apt install -y python3-venv
-
-  # Create a virtual environment
-  python3 -m venv $HOME_DIR/venv
-  source $HOME_DIR/venv/bin/activate
-
-  # Install the required libraries
-  pip install paho-mqtt ping3
+# Check if the virtual environment directory exists
+if [ -d "$HOME_DIR/venv" ]; then
+    echo "Virtual environment already exists. Activating it..."
+    source $HOME_DIR/venv/bin/activate
 else
-  # Activate the existing virtual environment
-  source $HOME_DIR/venv/bin/activate
+    echo "Creating a new virtual environment..."
+    python3 -m venv $HOME_DIR/venv
+    source $HOME_DIR/venv/bin/activate
 fi
+
+# Install necessary Python packages if not already installed
+REQUIRED_PACKAGES=("paho-mqtt" "ping3")
+for PACKAGE in "${REQUIRED_PACKAGES[@]}"; do
+    if pip show "$PACKAGE" > /dev/null 2>&1; then
+        echo "$PACKAGE is already installed."
+    else
+        echo "Installing $PACKAGE..."
+        pip install "$PACKAGE"
+    fi
+done
 
 # Create or overwrite the config.py file
 cat <<EOL > $HOME_DIR/config.py
