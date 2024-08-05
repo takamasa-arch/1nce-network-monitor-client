@@ -128,7 +128,7 @@ def check_status():
         logging.error("GSM connection failed, setting all status flags to 0")
     else:
         try:
-            latency_pg = ping(GOOGLE_SERVER)
+            latency_pg = ping(GOOGLE_SERVER, timeout=5)
             pg_status = 1 if latency_pg else 0
             logging.info(f"Ping Google server status: {'Success' if pg_status else 'Failure'}, latency: {latency_pg} ms")
         except Exception as e:
@@ -137,7 +137,7 @@ def check_status():
             logging.error(f"Ping to Google server failed: {e}")
 
         try:
-            latency_po = ping(BROKER_ADDRESS)
+            latency_po = ping(BROKER_ADDRESS, timeout=5)
             po_status = 1 if latency_po else 0
             logging.info(f"Ping OpenVPN server status: {'Success' if po_status else 'Failure'}, latency: {latency_po} ms")
         except Exception as e:
