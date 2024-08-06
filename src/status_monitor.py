@@ -63,6 +63,36 @@ def parse_cpsi_response(response):
         logging.error(f"Failed to parse CPSI response: {e}")
     return None
 
+# Get signal strength using mmcli
+def get_signal_strength():
+    try:
+        # コマンドを1行で渡すように変更
+        command = "sudo mmcli -m 0 --signal-get"
+        result = subprocess.run(
+            command, capture_output=True, text=True, shell=True, check=True
+        )
+        output = result.stdout.strip()
+        logging.info(f"Signal strength retrieved: {output}")
+
+        # Parse the mmcli output
+        signal_data = {}
+        for line in output.splitlines():
+            if 'rssi:' in line:
+                signal_data['rssi'] = float(line.split(':')[1].replace('dBm', '').strip())
+            elif 'rsrq:' in line:
+                signal_data['rsrq'] = float(line.split(':')[1].replace('dB', '').strip())
+            elif 'rsrp:' in line:
+                signal_data['rsrp'] = float(line.split(':')[1].replace('dBm', '').strip())
+            elif 's/n:' in line:
+                signal_data['snr'] = float(line.split(':')[1].replace('dB', '').strip())
+
+        return signal_data
+
+    except subprocess.CalledProcessError as e:
+        logging.error(f"Failed to get signal strength: {e}")
+        return None
+
+
 # Connect GSM function
 def connect_gsm():
     try:
@@ -173,13 +203,13 @@ def radio_status(radio_log_dir, mqtt_radio_dir, latency_pg, latency_po):
 
     logging.info("Starting radio status check")
 
-    at_response = send_at_command('AT+CPSI?\r\n')
-    parsed_response = parse_cpsi_response(at_response)
+    # Retrieve signal strength data
+    signal_data = get_signal_strength()
 
-    if parsed_response:
+    if signal_data:
         data = {
             "ts": timestamp,
-            **parsed_response,
+            **signal_data,
             "latency_pg": latency_pg if latency_pg else None,
             "latency_po": latency_po if latency_po else None
         }
