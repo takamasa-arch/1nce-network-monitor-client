@@ -31,11 +31,12 @@ def main():
         os.makedirs(RADIO_LOG_DIR, exist_ok=True)
         os.makedirs(MQTT_RADIO_DIR, exist_ok=True)
 
-        ping_interval = 60  # 1分おき
         send_interval = 300  # 5分おき
         last_send_time = datetime.now(timezone.utc)  # タイムゾーンをUTCに統一
 
         while True:
+            start_time = time.time()  # ループの開始時刻を記録
+
             current_time = datetime.now(timezone.utc)  # タイムゾーンをUTCに統一
 
             # 1分ごとにステータスチェック
@@ -59,7 +60,11 @@ def main():
             if lu_status == 1:
                 disconnect_gsm()
 
-            time.sleep(ping_interval)
+            # 処理にかかった時間を計算
+            elapsed_time = time.time() - start_time
+            remaining_time = max(60 - elapsed_time, 0)  # 60秒から経過時間を引き、残り時間を計算
+
+            time.sleep(remaining_time)  # 残り時間だけ待機
 
     except Exception as e:
         logging.critical(f"Critical error in main loop: {e}")
