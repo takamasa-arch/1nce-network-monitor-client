@@ -97,11 +97,6 @@ def get_signal_strength():
 def connect_gsm():
     try:
         response = send_at_command('AT+CFUN=1\r\n')
-        if response and "OK" in response:
-            logging.info("GSM connection activated")
-        else:
-            logging.error(f"Failed to activate GSM connection: {response}")
-            return False
 
         time.sleep(10)  # 10秒の待機時間を追加
 
