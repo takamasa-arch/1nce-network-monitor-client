@@ -103,7 +103,7 @@ def connect_gsm():
             logging.error(f"Failed to activate GSM connection: {response}")
             return False
 
-        time.sleep(5)  # 5秒の待機時間を追加
+        time.sleep(10)  # 10秒の待機時間を追加
 
         response = send_at_command('AT+CPIN?\r\n')
         if response and "+CPIN: READY" in response:
