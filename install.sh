@@ -80,9 +80,26 @@ User=$(whoami)
 WantedBy=multi-user.target
 EOL"
 
+sudo bash -c "cat <<EOL > /etc/systemd/system/mmcli-signal-setup.service
+[Unit]
+Description=Setup Modem Signal Monitoring
+After=network.target
+
+[Service]
+Type=oneshot
+ExecStart=/usr/bin/mmcli -m 0 --signal-setup=30
+RemainAfterExit=true
+
+[Install]
+WantedBy=multi-user.target
+EOL"
+
 # Reload systemd, enable, and start the service
 sudo systemctl daemon-reload
 sudo systemctl enable 1nce_network_monitor.service
 sudo systemctl start 1nce_network_monitor.service
+
+sudo systemctl enable mmcli-signal-setup.service
+sudo systemctl start mmcli-signal-setup.service
 
 echo "Installation and setup complete. The 1NCE Network Monitor service is now running."
