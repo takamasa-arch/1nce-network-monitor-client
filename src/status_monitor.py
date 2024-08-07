@@ -74,6 +74,16 @@ def get_signal_strength():
         output = result.stdout.strip()
         logging.info(f"Signal strength retrieved: {output}")
 
+        # Refresh rate が0秒であれば signal-setup コマンドを実行
+        if 'refresh rate: 0 seconds' in output:
+            try:
+                command_setup = "sudo mmcli -m 0 --signal-setup=30"
+                subprocess.run(command_setup, shell=True, check=True)
+                logging.info("Signal setup command executed successfully")
+            except subprocess.CalledProcessError as e:
+                logging.error(f"Signal setup command failed: {e}")
+                return None  # signal-setupが失敗した場合にはNoneを返す
+
         # Parse the mmcli output
         signal_data = {}
         for line in output.splitlines():

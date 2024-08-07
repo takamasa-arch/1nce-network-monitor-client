@@ -74,7 +74,7 @@ WorkingDirectory=$HOME_DIR
 StandardOutput=file:$HOME_DIR/log/main.log
 StandardError=file:$HOME_DIR/log/main.log
 Restart=always
-User=$(whoami)
+User=$CURRENT_USER
 
 [Install]
 WantedBy=multi-user.target

@@ -38,6 +38,7 @@ This repository contains a Python-based MQTT network monitoring system that peri
 ```sh
 git clone https://github.com/takamasa-arch/1nce-network-monitor-client.git
 cd 1nce-network-monitor-client
+sudo bash -c "echo '$CURRENT_USER ALL=(ALL) NOPASSWD: /usr/bin/mmcli, /sbin/reboot' >> /etc/sudoers"
 chmod +x install.sh
 chmod +x uninstall.sh
 ```
