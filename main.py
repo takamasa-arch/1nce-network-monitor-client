@@ -1,4 +1,4 @@
-from src.status_monitor import check_status, disconnect_gsm
+from src.status_monitor import check_status, disconnect_gsm, send_at_command
 from src.mqtt_client import send_mqtt_data, send_mqtt_radio_data
 from config import LOG_DIR_PATH, LOG_DIR, MQTT_DIR, RADIO_LOG_DIR, MQTT_RADIO_DIR
 import time
@@ -6,6 +6,7 @@ from datetime import datetime, timezone
 import os
 import logging
 from logging.handlers import TimedRotatingFileHandler
+import subprocess  # rebootを実行するために必要
 
 # ログディレクトリが存在しない場合に作成
 if not os.path.exists(LOG_DIR_PATH):
@@ -34,6 +35,14 @@ def main():
         send_interval = 300  # 5分おき
         last_send_time = datetime.now(timezone.utc)  # タイムゾーンをUTCに統一
 
+        # signal-setupコマンドの実行
+        try:
+            command = "sudo mmcli -m 0 --signal-setup=30"
+            subprocess.run(command, shell=True, check=True)
+            logging.info("Signal setup command executed successfully")
+        except subprocess.CalledProcessError as e:
+            logging.error(f"Signal setup command failed: {e}")
+
         while True:
             start_time = time.time()  # ループの開始時刻を記録
 
@@ -57,8 +66,16 @@ def main():
                     logging.error(f"Error in sending MQTT data: {e}")
 
             # 全ての処理が終わったら、GSM接続を切断
-            if lu_status == 1:
-                disconnect_gsm()
+            disconnect_gsm()
+
+            # ATコマンドを送信し、OKが返ってこなければ再起動
+            try:
+                response = send_at_command('AT\r\n')
+                if not response or "OK" not in response:
+                    logging.error("AT command failed, rebooting system...")
+                    subprocess.run("sudo reboot now", shell=True)
+            except Exception as e:
+                logging.error(f"Failed to send AT command or reboot: {e}")
 
             # 処理にかかった時間を計算
             elapsed_time = time.time() - start_time

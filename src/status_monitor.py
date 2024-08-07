@@ -107,20 +107,14 @@ def connect_gsm():
             logging.error(f"SIM is not ready: {response}")
             return False
 
-        response = send_at_command('AT+CGATT?\r\n')
-        if response and "+CGATT: 1" in response:
+        response = send_at_command('AT+CGACT?\r\n')
+        if response and "+CGACT: 1,1" in response:
             logging.info("PDP context is active")
+            return True
         else:
-            logging.error(f"PDP context is not active: {response}")
-            response = send_at_command('AT+CGATT=1\r\n')
-            if response and "OK" in response:
-                logging.info("PDP context activated")
-                return True
-            else:
-                logging.error(f"Failed to activate PDP context: {response}")
-                return False
+            logging.error(f"Failed to activate PDP context: {response}")
+            return False
 
-        return True
     except subprocess.CalledProcessError as e:
         logging.error(f"Failed to connect: {e}")
         return False
