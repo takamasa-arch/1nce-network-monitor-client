@@ -158,6 +158,7 @@ def check_status():
     else:
         try:
             latency_pg = ping(GOOGLE_SERVER, timeout=5)
+            latency_pg = round(latency_pg, 3) if latency_pg else None  # 小数点以下3桁に丸める
             pg_status = 1 if latency_pg else 0
             logging.info(f"Ping Google server status: {'Success' if pg_status else 'Failure'}, latency: {latency_pg} ms")
         except Exception as e:
@@ -167,6 +168,7 @@ def check_status():
 
         try:
             latency_po = ping(BROKER_ADDRESS, timeout=5)
+            latency_po = round(latency_po, 3) if latency_po else None  # 小数点以下3桁に丸める
             po_status = 1 if latency_po else 0
             logging.info(f"Ping OpenVPN server status: {'Success' if po_status else 'Failure'}, latency: {latency_po} ms")
         except Exception as e:
@@ -209,8 +211,8 @@ def radio_status(radio_log_dir, mqtt_radio_dir, latency_pg, latency_po):
         data = {
             "ts": timestamp,
             **signal_data,
-            "latency_pg": latency_pg if latency_pg else None,
-            "latency_po": latency_po if latency_po else None
+            "lpg": latency_pg if latency_pg else None,
+            "lpo": latency_po if latency_po else None
         }
 
         save_data(data, radio_log_dir, 'radio_status')
