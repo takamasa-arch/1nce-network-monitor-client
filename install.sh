@@ -14,6 +14,11 @@ fi
 BROKER_IP=$1
 ICCID=$2
 HOME_DIR=$(pwd)  # スクリプトを実行した場所を使用
+CURRENT_USER=$(whoami)  # 現在のユーザーを取得
+
+# Install picocom if it's not already installed
+sudo apt update
+sudo apt install -y picocom
 
 # Check if the virtual environment directory exists
 if [ -d "$HOME_DIR/venv" ]; then
